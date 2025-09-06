@@ -6,6 +6,7 @@ import raylib5::rl;
 const int HEIGHT = 600;
 const int WIDTH = 800;
 const int MAX_CIRCLES = 2;
+const int[] DIRECTION = {-1, 1};
 
 struct Ball
 {
@@ -27,10 +28,11 @@ fn void main()
 	Ball ball           = {};
 	float spawnInterval = 2.0f;
 	float timeToDespawn = 1.2f;
-	float timer         = 0.0f;
+	float ballTimer     = 0.0f;
+	float gameTimer     = 0.0f;
 
 	// movement 
-	float speed       = 150f;
+	float speed       = 100f;
 	Vector2 direction = {};
 	bool goingLeft    = false;
 	bool goingRight   = false;
@@ -78,23 +80,25 @@ fn void main()
 				elapsedTime = (int)rl::getTime();
 				if (rl::isKeyDown(rl::KEY_ENTER)) { state = GameState.CLICKING; }
 				if (rl::isKeyDown(rl::KEY_SPACE)) { state = GameState.TRACKING; }
+				// direction = {DIRECTION[rand_in_range(0, DIRECTION.len - 1)], 0};
+				goingRight = true;
+
 				show = (elapsedTime % 2) == 0;
 				break;
 			case GameState.TRACKING:
+				gameTimer += rl::getFrameTime();
 				set_ball_spawn(&ball, (Vector2){(float)rl::getScreenWidth() / 2, (float)rl::getScreenHeight()  / 2}, 20f);
-				timer += rl::getFrameTime();
-				direction = {1,0};
-				ball.position.x += direction.x * speed * timer;
+
+				direction.x = (float)goingRight - (float)goingLeft;
+				ball.position.x += direction.x * speed * gameTimer;
 
 				if (ball.position.x + ball.radius >= rightBound) { goingLeft = true; goingRight = false; }
-				if (ball.position.x - ball.radius <= leftBound ,)  { goingLeft = false; goingRight = true; }
-
-				if (goingRight) { direction.x += 1.0f; io::printn("go right"); }
-				if (goingLeft)  { direction.y += 1.0f;  io::printn("go left"); }
-
+				// if (ball.position.x - ball.radius <= leftBound)  { goingLeft = false; goingRight = true; }
 				break;
 			case GameState.CLICKING:
 				// mousePos = rl::getMousePosition();
+				gameTimer += rl::getFrameTime();
+				ballTimer += rl::getFrameTime(); 
 				mouseDelta = rl::getMouseDelta();
 				if (rl::isKeyPressed(rl::KEY_P)) { isPaused = !isPaused; }
 
@@ -106,21 +110,20 @@ fn void main()
 					lives = 3;
 					isDead = false;
 					isPaused = false; 
-					timer = 0.0f;
+					ballTimer = 0.0f;
 				}
 		
 				if (!isPaused && !isDead)
 				{
-					timer += rl::getFrameTime(); 
-					if (timer >= spawnInterval && ballCount < MAX_CIRCLES)
+					if (ballTimer >= spawnInterval && ballCount <= MAX_CIRCLES)
 					{
 						set_ball_spawn(&ball, (Vector2){rand_in_range(200, rl::getScreenWidth() - 100), rand_in_range(200,rl::getScreenHeight() - 100)}, rand_in_range(10,25));
 						ballCount++;
 				
-						timer = 0.0f;
+						ballTimer = 0.0f;
 					}
 			
-					if (timer >= timeToDespawn && ballCount > 0)
+					if (ballTimer >= timeToDespawn && ballCount > 0)
 					{
 						rl::playSound(miss);
 						ball.isActive = false;
@@ -133,7 +136,7 @@ fn void main()
 						if (rl::checkCollisionPointCircle(mousePos, ball.position, ball.radius))
 						{
 							rl::playSound(hit);
-							score += (int)(10 + ((timeToDespawn - timer) * 10)); 
+							score += (int)(10 + ((timeToDespawn - ballTimer) * 10)); 
 							ball.isActive = false; 
 							ballCount--;
 						} else {
@@ -153,8 +156,12 @@ fn void main()
 					}
 				}	
 
-				mousePos.x += mouseDelta.x * sens;
-				mousePos.y += mouseDelta.y * sens;
+				if (gameTimer < 1) {
+					mousePos = {(float)rl::getScreenWidth() / 2, (float)rl::getScreenHeight() / 2};
+				} else {
+					mousePos.x += mouseDelta.x * sens;
+					mousePos.y += mouseDelta.y * sens;
+				}
 
 				if (mousePos.x < 0) mousePos.x = 0;
 				if (mousePos.x > rl::getScreenWidth()) mousePos.x = rl::getScreenWidth();
@@ -181,10 +188,6 @@ fn void main()
 				if (ball.isActive)
 				{
 					rl::drawCircleV(ball.position, ball.radius, rl::RED);
-				}
-				else
-				{
-					rl::drawCircleV(ball.position, ball.radius, rl::RAYWHITE);
 				}
 
 				rl::drawCircleV(mousePos, 3, rl::BLACK);
@@ -218,5 +221,5 @@ fn void show_death_menu()
 {
 	rl::drawRectangleV({0, (float)rl::getScreenHeight() / 2 - 50}, {(float)rl::getScreenWidth(), 150}, rl::RED);
 	rl::drawText("DEAD", rl::getScreenWidth() / 2, rl::getScreenHeight() / 2 - 20, 40, rl::BLACK);
-	rl::drawText("Press [R] to restart // [Esc] to quit", rl::getScreenWidth() / 2 - 300, rl::getScreenHeight() / 2 + 50, 32, rl::BLACK);
+	rl::drawText("Press [R] to restart || [Esc] to quit", rl::getScreenWidth() / 2 - 300, rl::getScreenHeight() / 2 + 50, 32, rl::BLACK);
 }
