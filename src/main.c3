@@ -32,8 +32,8 @@ fn void main()
 	float gameTimer     = 0.0f;
 
 	// movement 
-	float speed       = 100f;
 	Vector2 direction = {};
+	float speed       = 150f;
 	bool goingLeft    = false;
 	bool goingRight   = false;
 
@@ -46,14 +46,14 @@ fn void main()
 
 	// Mouse val
 	Vector2 mousePos   = {};
-	Vector2 mouseDelta = {(float)rl::getScreenWidth() / 2, (float)rl::getScreenHeight() / 2};
+	Vector2 mouseDelta = {};
 	float sens         = 0.9f;
 
 	// Blink vars
 	int elapsedTime = 0;
 	bool show       = false;
 
-	rl::initWindow(HEIGHT, WIDTH, "pew");
+	rl::initWindow(HEIGHT, WIDTH, "tsub");
 	defer rl::closeWindow();
 
 	rl::initAudioDevice();
@@ -71,8 +71,8 @@ fn void main()
 	GameState state = GameState.START;
 	while(!rl::windowShouldClose())
 	{
-		float rightBound = (float)(rl::getScreenWidth() / 4) * 3;
-		float leftBound  = (float)(rl::getScreenWidth() / 3);
+		float rightBound = (float)rl::getScreenWidth() * 0.8f;
+		float leftBound  = (float)rl::getScreenWidth() * 0.2f;
 
 		switch (state)
 		{
@@ -80,20 +80,40 @@ fn void main()
 				elapsedTime = (int)rl::getTime();
 				if (rl::isKeyDown(rl::KEY_ENTER)) { state = GameState.CLICKING; }
 				if (rl::isKeyDown(rl::KEY_SPACE)) { state = GameState.TRACKING; }
-				// direction = {DIRECTION[rand_in_range(0, DIRECTION.len - 1)], 0};
+				direction = {DIRECTION[rand_in_range(0, DIRECTION.len - 1)], 0};
 				goingRight = true;
 
 				show = (elapsedTime % 2) == 0;
 				break;
 			case GameState.TRACKING:
 				gameTimer += rl::getFrameTime();
-				set_ball_spawn(&ball, (Vector2){(float)rl::getScreenWidth() / 2, (float)rl::getScreenHeight()  / 2}, 20f);
+				float dt = rl::getFrameTime();
+				mouseDelta = rl::getMouseDelta();
 
-				direction.x = (float)goingRight - (float)goingLeft;
-				ball.position.x += direction.x * speed * gameTimer;
+				if (gameTimer < 1) {
+					set_ball_spawn(&ball, (Vector2){(float)rl::getScreenWidth() / 2, (float)rl::getScreenHeight()  / 2}, 20f);	
+					mousePos = {(float)rl::getScreenWidth() / 2, (float)rl::getScreenHeight() / 2};
+				} else {
+					direction.x = (float)goingRight - (float)goingLeft;
+					ball.position.x += direction.x * speed * dt;
 
-				if (ball.position.x + ball.radius >= rightBound) { goingLeft = true; goingRight = false; }
-				// if (ball.position.x - ball.radius <= leftBound)  { goingLeft = false; goingRight = true; }
+					if (rl::checkCollisionPointCircle(mousePos, ball.position, ball.radius))
+					{
+						score += 10; 
+					} 
+
+					mousePos.x += mouseDelta.x * sens;
+					mousePos.y += mouseDelta.y * sens;
+
+					if (mousePos.x < 0) mousePos.x = 0;
+					if (mousePos.x > rl::getScreenWidth()) mousePos.x = rl::getScreenWidth();
+					if (mousePos.y < 0) mousePos.y = 0;
+					if (mousePos.y > rl::getScreenHeight()) mousePos.y = rl::getScreenHeight();
+
+					if (ball.position.x + ball.radius >= rightBound) { goingLeft = true; goingRight = false; }
+					if (ball.position.x - ball.radius <= leftBound)  { goingLeft = false; goingRight = true; }
+				}
+
 				break;
 			case GameState.CLICKING:
 				// mousePos = rl::getMousePosition();
@@ -182,6 +202,9 @@ fn void main()
 				break;
 			case GameState.TRACKING:
 				rl::drawCircleV(ball.position, ball.radius, rl::RED);
+				rl::drawCircleV(mousePos, 3, rl::BLACK);
+				rl::drawText(rl::textFormat("Score: %d", score), 10, 15, 30, rl::BLACK);
+				rl::drawText(rl::textFormat("Time: %d", (int)gameTimer), 10, 50, 30, rl::BLACK);
 
 				break;
 			case GameState.CLICKING:
