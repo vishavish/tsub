@@ -1,6 +1,6 @@
  # tsub
 
-**tsub** a game made with Raylib and C3 to test tapping and tracking skills.
+**tsub** a game made with Raylib and C3 to test your tapping and tracking skills.
 
 ## Motivation
 
@@ -18,6 +18,6 @@ git clone https://github.com/vishavish/tsub.git
 
 2. Run the project:
 ```
-cd src
+cd tsub
 c3c run
 ```
