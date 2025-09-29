@@ -4,10 +4,7 @@
   "dependency-search-paths":  [ "lib" ],
   "dependencies":  [ "raylib55" ],
   "version": "0.1.0",
-  "sources":  [
-    "src/**",
-    "test/**"
-  ],
+  "sources":  [ "src/**", "test/**" ],
   "output": "build",
   "targets": {
     "tsub": {
