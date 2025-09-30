@@ -5,7 +5,7 @@ import raylib5::rl;
 
 const int HEIGHT = 600;
 const int WIDTH = 800;
-const int MAX_CIRCLES = 2;
+const int MAX_CIRCLES = 3;
 const int[] DIRECTION = {-1, 1};
 
 struct Ball
@@ -34,9 +34,12 @@ enum GameState
 fn void main()
 {
 	// Main element
+	Ball[] balls       = mem::new_array(Ball, 3);
+	defer mem::free(balls);
+
 	Ball ball           = {};
 	float spawnInterval = 1.0f;
-	float timeToDespawn = 1.2f;
+	float timeToDespawn = 0.5f;
 	float ballTimer     = 0.0f;
 	float gameTimer     = 0.0f;
 
@@ -77,10 +80,7 @@ fn void main()
 	Sound miss = rl::loadSound("assets/miss.wav");
 	defer rl::unloadSound(miss);
 
-	for(int i = 0; i < 5; i++)
-	{
-		buttons[i] = create_button(i);
-	}
+	for(int i = 0; i < 5; i++) { buttons[i] = create_button(i); }
 
 	GameState state = GameState.START;
 	while(!rl::windowShouldClose())
@@ -104,6 +104,7 @@ fn void main()
 				if (mousePos.y < 0) mousePos.y = 0;
 				if (mousePos.y > rl::getScreenHeight()) mousePos.y = rl::getScreenHeight();
 
+				// TODO:: Move creating buttons into a new function, maybe.
 				Rectangle tap = {
 					.x      = buttons[0].position.x,
 					.y      = buttons[0].position.y,
@@ -119,17 +120,11 @@ fn void main()
 				};
 
 
+				// TODO:: Move handling of button events into a new function.
 				if (rl::isMouseButtonPressed(MouseButton.LEFT))
 				{
-					if(rl::checkCollisionPointRec(mousePos, tap))
-					{
-						state = GameState.TAPPING;
-					}
-
-					if(rl::checkCollisionPointRec(mousePos, track))
-					{
-						state = GameState.TRACKING;
-					}
+					if(rl::checkCollisionPointRec(mousePos, tap))   { state = GameState.TAPPING; }
+					if(rl::checkCollisionPointRec(mousePos, track))	{ state = GameState.TRACKING; }
 				}
 
 				goingRight = true;
@@ -142,17 +137,17 @@ fn void main()
 
 				// direction = {DIRECTION[rand_in_range(0, DIRECTION.len - 1)], 0};
 
-				if (gameTimer < 1) {
+				if (gameTimer < 1)
+				{
 					set_ball_spawn(&ball, (Vector2){(float)rl::getScreenWidth() / 2, (float)rl::getScreenHeight()  / 2}, 20f);	
 					mousePos = {(float)rl::getScreenWidth() / 2, (float)rl::getScreenHeight() / 2};
-				} else {
+				}
+				else
+				{
 					direction.x = (float)goingRight - (float)goingLeft;
 					ball.position.x += direction.x * speed * dt;
 
-					if (rl::checkCollisionPointCircle(mousePos, ball.position, ball.radius))
-					{
-						score += 10; 
-					} 
+					if (rl::checkCollisionPointCircle(mousePos, ball.position, ball.radius)) { score += 10; } 
 
 					mousePos.x += mouseDelta.x * sens;
 					mousePos.y += mouseDelta.y * sens;
@@ -168,12 +163,14 @@ fn void main()
 
 				break;
 			case GameState.TAPPING:
-				// mousePos = rl::getMousePosition();
 				gameTimer += rl::getFrameTime();
 				ballTimer += rl::getFrameTime(); 
 				mouseDelta = rl::getMouseDelta();
-				if (rl::isKeyPressed(rl::KEY_P)) { isPaused = !isPaused; }
 
+				// TODO:: Change handling when ballCount reaches < 0
+				if(ballCount < 0) ballCount = 0;
+
+				if (rl::isKeyPressed(rl::KEY_P)) { isPaused = !isPaused; }
 				if (rl::isKeyPressed(rl::KEY_R) && isDead)
 				{
 					ball.isActive = false;
@@ -187,58 +184,69 @@ fn void main()
 		
 				if (!isPaused && !isDead)
 				{
-					if (ballTimer >= spawnInterval && ballCount <= MAX_CIRCLES)
+					if (ballTimer >= spawnInterval && ballCount < MAX_CIRCLES)
 					{
-						set_ball_spawn(&ball, (Vector2){rand_in_range(200, rl::getScreenWidth() - 100), rand_in_range(200,rl::getScreenHeight() - 100)}, rand_in_range(10,25));
+						set_ball_spawn(&balls[ballCount], (Vector2){rand_in_range(200, rl::getScreenWidth() - 100), rand_in_range(200,rl::getScreenHeight() - 100)}, rand_in_range(10,25));
+
 						ballCount++;
-				
 						ballTimer = 0.0f;
 					}
 			
 					if (ballTimer >= timeToDespawn && ballCount > 0)
 					{
+						io::printn(ballTimer);
 						rl::playSound(miss);
-						ball.isActive = false;
+						foreach(&b:balls) (*b).isActive = false;
 						ballCount--;
 						lives--;
 					}
 			
 					if (rl::isMouseButtonPressed(MouseButton.LEFT))
 					{
-						if (rl::checkCollisionPointCircle(mousePos, ball.position, ball.radius))
+						foreach(&b:balls)
 						{
-							rl::playSound(hit);
-							score += (int)(10 + ((timeToDespawn - ballTimer) * 10)); 
-							ball.isActive = false; 
-							ballCount--;
-						} else {
-							rl::playSound(miss);
-							lives--;
-							ballCount--;
-							ball.isActive = false; 
-						}	
+							if (rl::checkCollisionPointCircle(mousePos, (*b).position, (*b).radius))
+							{
+								rl::playSound(hit);
+								score += (int)(10 + ((timeToDespawn - ballTimer) * 10)); 
+								(*b).isActive = false;
+								ballCount--;
+							}
+
+							// TODO:: add handling when tap misses the target
+							// else
+							// {
+							// 	rl::playSound(miss);
+							// 	lives--;
+							// 	// foreach(&b:balls) b.isActive = false;
+							// 	b.isActive = false; 
+							// 	ballCount--;
+							// }	
+						}
 					}
 			
 					if (lives <= 0)
 					{
-						if (ball.isActive) { ball.isActive = false; }
-
+						foreach(&b:balls) {	(*b).isActive = (*b).isActive ? false : true; }
 						isDead = true;
 						lives = 0;
 					}
 				}	
 
-				if (gameTimer < 1) {
+				if (gameTimer < 1)
+				{
 					mousePos = {(float)rl::getScreenWidth() / 2, (float)rl::getScreenHeight() / 2};
-				} else {
+				}
+				else
+				{
 					mousePos.x += mouseDelta.x * sens;
 					mousePos.y += mouseDelta.y * sens;
 				}
 
-				if (mousePos.x < 0) mousePos.x = 0;
-				if (mousePos.x > rl::getScreenWidth()) mousePos.x = rl::getScreenWidth();
-				if (mousePos.y < 0) mousePos.y = 0;
-				if (mousePos.y > rl::getScreenHeight()) mousePos.y = rl::getScreenHeight();
+				if (mousePos.x < 0) { mousePos.x = 0; }
+				if (mousePos.y < 0) { mousePos.y = 0; }
+				if (mousePos.x > rl::getScreenWidth()) { mousePos.x = rl::getScreenWidth(); }
+				if (mousePos.y > rl::getScreenHeight()) { mousePos.y = rl::getScreenHeight(); }
 				break;
 		}
 
@@ -265,10 +273,7 @@ fn void main()
 
 				break;
 			case GameState.TAPPING:
-				if (ball.isActive)
-				{
-					rl::drawCircleV(ball.position, ball.radius, rl::RED);
-				}
+				foreach(&b:balls) if ((*b).isActive) { rl::drawCircleV((*b).position, (*b).radius, rl::RED); }
 
 				rl::drawCircleV(mousePos, 3, rl::BLACK);
 		
