@@ -104,27 +104,11 @@ fn void main()
 				if (mousePos.y < 0) mousePos.y = 0;
 				if (mousePos.y > rl::getScreenHeight()) mousePos.y = rl::getScreenHeight();
 
-				// TODO:: Move creating buttons into a new function, maybe.
-				Rectangle tap = {
-					.x      = buttons[0].position.x,
-					.y      = buttons[0].position.y,
-					.width  = buttons[0].width,
-					.height = buttons[0].height
-				};
-
-				Rectangle track = {
-					.x      = buttons[1].position.x,
-					.y      = buttons[1].position.y,
-					.width  = buttons[1].width,
-					.height = buttons[1].height
-				};
-
-
 				// TODO:: Move handling of button events into a new function.
 				if (rl::isMouseButtonPressed(MouseButton.LEFT))
 				{
-					if(rl::checkCollisionPointRec(mousePos, tap))   { state = GameState.TAPPING; }
-					if(rl::checkCollisionPointRec(mousePos, track))	{ state = GameState.TRACKING; }
+					if(rl::checkCollisionPointRec(mousePos, make_rect(&buttons[0]))) { state = GameState.TAPPING; }
+					if(rl::checkCollisionPointRec(mousePos, make_rect(&buttons[1]))) { state = GameState.TRACKING; }
 				}
 
 				goingRight = true;
@@ -260,6 +244,11 @@ fn void main()
 
 				rl::drawRectangleV(buttons[0].position, (Vector2){buttons[0].width, buttons[0].height}, rl::BLACK);
 				rl::drawRectangleV(buttons[1].position, (Vector2){buttons[1].width, buttons[1].height}, rl::RED);
+
+				// TODO:: Move to a new function. But okay for now.
+				// Or move to `create_button` function.
+				rl::drawText("Tap", (int)buttons[0].position.x + 20, (int)buttons[0].position.y + 10, 30, rl::RAYWHITE);
+				rl::drawText("Track", (int)buttons[1].position.x + 10, (int)buttons[1].position.y + 10, 25, rl::RAYWHITE);
 			
 				rl::drawCircleV(mousePos, 3, rl::BLACK);
 				if (show) { rl::drawText("tsub", (rl::getScreenWidth() / 2), rl::getScreenHeight() / 2, 50, rl::BLACK); }
@@ -316,10 +305,20 @@ fn Button create_button(int index)
 
 	Button b       = {};
 	b.name         = buttons[index];
-	b.width        = 75;
+	b.width        = 100;
 	b.height       = 50;
-	b.position.x   = (float)(rl::getScreenWidth() / 2) + b.width + spacing;
+	b.position.x   = (float)(rl::getScreenWidth() / 2) + 10 + spacing;
 	b.position.y   = (float)(rl::getScreenHeight() / 2);
-	spacing += 100;
+	spacing += 130;
 	return b;
+}
+
+fn Rectangle make_rect(Button* button)
+{
+	return (Rectangle){
+		.x      = (*button).position.x,
+		.y      = (*button).position.y,
+		.width  = (*button).width,
+		.height = (*button).height
+	};
 }
